@@ -51,14 +51,24 @@ def detect_injection(user_input: str) -> InputStatus:
     Returns:
         ``"BLOCK"`` if injection detected (chặn), ``"ALLOW"`` otherwise (cho qua).
     """
+    # 1. Canonicalize Unicode and invisible characters (e.g. \u200b zero-width space)
+    normalized = re.sub(r"[\u200b-\u200f\u2028-\u202f\ufeff\u00ad]", "", user_input)
+    normalized_clean = re.sub(r"\s+", " ", normalized).strip()
+
     INJECTION_PATTERNS = [
-        # TODO: Add at least 5 regex patterns
-        # Example:
-        # r"ignore (all )?(previous|above) instructions",
+        r"ignore\s+(all\s+)?(previous|above|prior)\s+instructions",
+        r"you\s+are\s+now\b",
+        r"system\s+prompt\b",
+        r"reveal\s+(your\s+|the\s+)?(instructions|prompt|system\s+prompt|password|credentials|secret)",
+        r"pretend\s+(that\s+)?you\s+are\b",
+        r"act\s+as\s+(a\s+|an\s+)?unrestricted\b",
+        r"disregard\s+(all\s+)?(previous|above|prior)\s+instructions",
+        r"show\s+(me\s+)?(the\s+)?(admin\s+password|api\s+key|credentials|secret)",
+        r"bypass\s+(safety|filter|guardrail)",
     ]
 
     for pattern in INJECTION_PATTERNS:
-        if re.search(pattern, user_input, re.IGNORECASE):
+        if re.search(pattern, normalized_clean, re.IGNORECASE):
             return "BLOCK"
     return "ALLOW"
 
@@ -74,6 +84,13 @@ def detect_injection(user_input: str) -> InputStatus:
 # Return ``"ALLOW"`` if banking-related and OK.
 # ============================================================
 
+def _remove_vietnamese_accents(text: str) -> str:
+    import unicodedata
+    nfkd = unicodedata.normalize('NFKD', text)
+    res = "".join(c for c in nfkd if not unicodedata.combining(c))
+    return res.replace('đ', 'd').replace('Đ', 'D')
+
+
 def topic_filter(user_input: str) -> InputStatus:
     """Decide whether the input is on-topic for VinBank.
 
@@ -85,13 +102,32 @@ def topic_filter(user_input: str) -> InputStatus:
         ``"ALLOW"`` = cho qua (câu banking hợp lệ).
     """
     input_lower = user_input.lower()
+    input_no_accent = _remove_vietnamese_accents(input_lower)
 
-    # TODO: Implement logic:
     # 1. If input contains any blocked topic -> return "BLOCK"
-    # 2. If input doesn't contain any allowed topic -> return "BLOCK"
-    # 3. Otherwise -> return "ALLOW"
+    for blocked in BLOCKED_TOPICS:
+        pattern = rf"\b{re.escape(blocked.lower())}\b"
+        if re.search(pattern, input_lower) or re.search(pattern, input_no_accent):
+            return "BLOCK"
 
-    pass  # Replace with your implementation
+    # 2. If input doesn't contain any allowed topic -> return "BLOCK"
+    has_allowed = False
+    for allowed in ALLOWED_TOPICS:
+        al_lower = allowed.lower()
+        if " " in al_lower:
+            if al_lower in input_lower or al_lower in input_no_accent:
+                has_allowed = True
+                break
+        else:
+            pattern = rf"\b{re.escape(al_lower)}\b"
+            if re.search(pattern, input_lower) or re.search(pattern, input_no_accent):
+                has_allowed = True
+                break
+
+    if not has_allowed:
+        return "BLOCK"
+
+    return "ALLOW"
 
 
 # ============================================================
@@ -144,14 +180,19 @@ class InputGuardrailPlugin(base_plugin.BasePlugin):
         self.total_count += 1
         text = self._extract_text(user_message)
 
-        # TODO: Implement logic:
-        # 1. Call detect_injection(text)
-        #    - If "BLOCK": increment blocked_count, return self._block_response("...")
-        # 2. Call topic_filter(text)
-        #    - If "BLOCK": increment blocked_count, return self._block_response("...")
-        # 3. If both return "ALLOW": return None (let message through)
+        if detect_injection(text) == "BLOCK":
+            self.blocked_count += 1
+            return self._block_response(
+                "I cannot process that request due to security policy."
+            )
 
-        pass  # Replace with your implementation
+        if topic_filter(text) == "BLOCK":
+            self.blocked_count += 1
+            return self._block_response(
+                "I can only help with banking-related questions at VinBank."
+            )
+
+        return None
 
 
 # ============================================================

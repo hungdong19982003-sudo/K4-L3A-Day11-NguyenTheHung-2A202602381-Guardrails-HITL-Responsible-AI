@@ -281,8 +281,9 @@ def create_red_agent_advance():
 
     if red_uses_gemini():
         plugins = [GuardsInputPlugin(), GuardsOutputPlugin()]
+        gemini_model = "gemini-3.5-flash-lite" if advance_model in ("gemini-3.5-flash", "gemini-3.8-flash") else advance_model
         agent = llm_agent.LlmAgent(
-            model=advance_model,
+            model=gemini_model,
             name="red_agent_advance",
             instruction=RED_ADVANCE_INSTRUCTION,
         )
