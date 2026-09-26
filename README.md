@@ -1,5 +1,10 @@
 # Day 11 — Controlled Agent Security (2026)
 
+- **Học viên:** Nguyễn Thế Hùng
+- **MSSV:** 2A202602381
+- **Lớp:** K4-L3A
+- **Repository:** [K4-L3A-Day11-NguyenTheHung-2A202602381-Guardrails-HITL-Responsible-AI](https://github.com/hungdong19982003-sudo/K4-L3A-Day11-NguyenTheHung-2A202602381-Guardrails-HITL-Responsible-AI)
+
 > 👤 **Hình thức:** bài tập **cá nhân** (1 người / 1 MSSV).  
 > 🎯 **Mục tiêu:** xây **Blue** (phòng thủ), rồi red-team **Red** + **Red Advance**.  
 > ✅ Làm theo **Checkpoint 1 → 5** trong [`CHECKPOINTS.md`](CHECKPOINTS.md) · nộp theo [`SUBMISSION.md`](SUBMISSION.md).
